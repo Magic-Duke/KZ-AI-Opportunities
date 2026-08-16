@@ -1,30 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "KZ AI Opportunities — Хакатоны и ИИ-соревнования в Казахстане",
+  title: "KZ AI Opportunities — Каталог соревнований и хакатонов Казахстана",
   description:
-    "Каталог актуальных хакатонов, AI-баттлов, олимпиад по программированию и стартап-конкурсов в Казахстане. Astana Hub, alem.ai, CPFED.",
-  keywords: [
-    "Хакатоны Казахстан",
-    "ИИ конкурсы Астана",
-    "Astana Hub Battle",
-    "CPFED",
-    "AI олимпиады",
-    "KBTU Open",
-    "alem.ai",
-  ],
+    "Реестр соревнований по машинному обучению, хакатонов, олимпиад и питч-конкурсов Казахстана и мировых платформ.",
 };
 
 export default function RootLayout({
@@ -33,11 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+    <html lang="ru" className="h-full antialiased scroll-smooth font-normal">
+      <body className="min-h-full flex flex-col font-sans bg-[#FAFAFA] text-[#27272A]">
+        {children}
+      </body>
     </html>
   );
 }

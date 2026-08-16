@@ -22,7 +22,7 @@ export default function CategoryFilter({
   onChange,
 }: CategoryFilterProps) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {categories.map((category) => {
         const isActive = selected === category;
 
@@ -31,10 +31,10 @@ export default function CategoryFilter({
             key={category}
             type="button"
             onClick={() => onChange(category)}
-            className={`rounded-xl px-3.5 py-2 text-xs sm:text-sm font-medium transition-all ${
+            className={`rounded border px-2.5 py-1 text-xs font-normal transition-colors cursor-pointer ${
               isActive
-                ? "bg-slate-900 text-white shadow-xs"
-                : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                ? "border-zinc-800 bg-zinc-800 text-white"
+                : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:text-zinc-900"
             }`}
           >
             {categoryLabels[category]}

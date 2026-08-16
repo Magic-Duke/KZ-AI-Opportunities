@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { competitions } from "@/data/competitions";
+import { useState, useMemo, useEffect } from "react";
 import type {
   Competition,
   CompetitionCategory,
@@ -15,10 +14,35 @@ import type {
 import CategoryFilter from "@/components/CategoryFilter";
 import CriteriaFilter from "@/components/CriteriaFilter";
 import CompetitionCard from "@/components/CompetitionCard";
+import CompareDrawer from "@/components/compare/CompareDrawer";
+import CompareModal from "@/components/compare/CompareModal";
+import { Search, RefreshCw } from "lucide-react";
+import { isStrictHackathon } from "@/lib/services/competitionQuality";
 
 type SortOption = "deadline" | "prize" | "barrier_asc" | "barrier_desc" | "trust";
 
 export default function CompetitionSection() {
+  const [dataList, setDataList] = useState<Competition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>("");
+  const [sourceCounts, setSourceCounts] = useState<{
+    kzLive?: number;
+    kzFlagship?: number;
+    kz?: number;
+    devpost: number;
+    codeforces: number;
+    total: number;
+  }>({
+    kz: 0,
+    devpost: 0,
+    codeforces: 0,
+    total: 0,
+  });
+
+  const [selectedForCompare, setSelectedForCompare] = useState<Competition[]>([]);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+
   const [selectedRegion, setSelectedRegion] = useState<CompetitionRegion | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
@@ -42,29 +66,103 @@ export default function CompetitionSection() {
   >("all");
   const [sortBy, setSortBy] = useState<SortOption>("deadline");
   const [showExpired, setShowExpired] = useState(false);
+  const [strictHackathonsOnly, setStrictHackathonsOnly] = useState(true);
 
-  // Фильтрация и сортировка
+  useEffect(() => {
+    async function loadLiveData() {
+      try {
+        const res = await fetch("/api/competitions");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            setDataList(json.data);
+            if (json.lastUpdated) {
+              setLastSyncTime(new Date(json.lastUpdated).toLocaleTimeString("ru-RU", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }));
+            }
+            if (json.counts) {
+              setSourceCounts(json.counts);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch verified competitions:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadLiveData();
+  }, []);
+
+  const handleForceSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/sync", { method: "POST" });
+      if (res.ok) {
+        const compRes = await fetch("/api/competitions?refresh=true");
+        const compJson = await compRes.json();
+        if (compJson.success && Array.isArray(compJson.data)) {
+          setDataList(compJson.data);
+          setLastSyncTime(new Date().toLocaleTimeString("ru-RU", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }));
+          if (compJson.counts) setSourceCounts(compJson.counts);
+        }
+      }
+    } catch (err) {
+      console.error("Force sync failed:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleToggleCompare = (competition: Competition) => {
+    setSelectedForCompare((prev) => {
+      const isAlreadySelected = prev.some((c) => c.id === competition.id);
+      if (isAlreadySelected) {
+        return prev.filter((c) => c.id !== competition.id);
+      }
+      if (prev.length >= 4) {
+        alert("Можно выбрать максимум 4 конкурса для одновременного сравнения.");
+        return prev;
+      }
+      return [...prev, competition];
+    });
+  };
+
+  const handleRemoveFromCompare = (id: string) => {
+    setSelectedForCompare((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const handleClearCompare = () => {
+    setSelectedForCompare([]);
+  };
+
   const filteredCompetitions = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return competitions
+    return dataList
       .filter((competition) => {
-        const deadlineDate = new Date(competition.deadline);
-        deadlineDate.setHours(23, 59, 59, 999);
-        const isExpired = deadlineDate.getTime() < today.getTime();
+        if (strictHackathonsOnly && !isStrictHackathon(competition.qualityStatus, competition.deadline)) {
+          return false;
+        }
 
-        // По умолчанию скрываем прошедшие конкурсы
+        const deadlineDate = competition.deadline ? new Date(competition.deadline) : null;
+        deadlineDate?.setHours(23, 59, 59, 999);
+        const isExpired = deadlineDate ? deadlineDate.getTime() < today.getTime() : false;
+
         if (!showExpired && isExpired) {
           return false;
         }
 
-        // Фильтр по региону (Казахстан / Мировые)
         if (selectedRegion !== "all" && competition.region !== selectedRegion) {
           return false;
         }
 
-        // Поиск по ключевым словам
         if (searchQuery.trim() !== "") {
           const query = searchQuery.toLowerCase();
           const matchTitle = competition.title.toLowerCase().includes(query);
@@ -79,7 +177,6 @@ export default function CompetitionSection() {
           }
         }
 
-        // Фильтр по городу (только для КЗ или онлайн)
         if (selectedCity !== "all") {
           if (selectedCity === "online") {
             if (competition.city !== "online" && competition.format !== "online") {
@@ -90,7 +187,6 @@ export default function CompetitionSection() {
           }
         }
 
-        // Фильтр по формату (онлайн / очно / гибрид)
         if (selectedFormat !== "all") {
           if (selectedFormat === "online" && competition.format !== "online") {
             return false;
@@ -103,12 +199,10 @@ export default function CompetitionSection() {
           }
         }
 
-        // Фильтр по порогу входа
         if (selectedBarrier !== "all" && competition.entryBarrier !== selectedBarrier) {
           return false;
         }
 
-        // Категория
         if (
           selectedCategory !== "all" &&
           competition.category !== selectedCategory
@@ -116,22 +210,18 @@ export default function CompetitionSection() {
           return false;
         }
 
-        // Только ИИ
         if (aiOnly && !competition.isAI) {
           return false;
         }
 
-        // С призовым фондом
         if (withPrize && !competition.hasPrize) {
           return false;
         }
 
-        // Открыто для всех
         if (openToAll && !competition.openToAll) {
           return false;
         }
 
-        // Аудитория (школьники / студенты / стартапы)
         if (
           selectedAudience !== "all" &&
           competition.audience !== selectedAudience &&
@@ -140,7 +230,6 @@ export default function CompetitionSection() {
           return false;
         }
 
-        // Рейтинг организатора
         if (
           selectedTrust !== "all" &&
           competition.trustRating !== selectedTrust
@@ -151,17 +240,16 @@ export default function CompetitionSection() {
         return true;
       })
       .sort((a, b) => {
-        // Сортировка по дедлайну
         if (sortBy === "deadline") {
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+          const deadlineA = a.deadline ? new Date(a.deadline).getTime() : Number.POSITIVE_INFINITY;
+          const deadlineB = b.deadline ? new Date(b.deadline).getTime() : Number.POSITIVE_INFINITY;
+          return deadlineA - deadlineB;
         }
-        // Сортировка по сумме призового фонда
         if (sortBy === "prize") {
           const prizeA = a.prizeValueKZT || 0;
           const prizeB = b.prizeValueKZT || 0;
           return prizeB - prizeA;
         }
-        // Сортировка по порогу входа (легкие сначала)
         if (sortBy === "barrier_asc") {
           const barrierWeight: Record<EntryBarrier, number> = {
             easy: 1,
@@ -170,7 +258,6 @@ export default function CompetitionSection() {
           };
           return barrierWeight[a.entryBarrier] - barrierWeight[b.entryBarrier];
         }
-        // Сортировка по порогу входа (сложные/стартапы сначала)
         if (sortBy === "barrier_desc") {
           const barrierWeight: Record<EntryBarrier, number> = {
             easy: 1,
@@ -179,7 +266,6 @@ export default function CompetitionSection() {
           };
           return barrierWeight[b.entryBarrier] - barrierWeight[a.entryBarrier];
         }
-        // Сортировка по рейтингу организатора
         if (sortBy === "trust") {
           const ratingWeight: Record<CompetitionTrustRating, number> = {
             high: 3,
@@ -191,6 +277,7 @@ export default function CompetitionSection() {
         return 0;
       });
   }, [
+    dataList,
     selectedRegion,
     searchQuery,
     selectedCategory,
@@ -204,6 +291,7 @@ export default function CompetitionSection() {
     selectedTrust,
     sortBy,
     showExpired,
+    strictHackathonsOnly,
   ]);
 
   const hasActiveFilters =
@@ -231,82 +319,123 @@ export default function CompetitionSection() {
     setOpenToAll(false);
     setSelectedAudience("all");
     setSelectedTrust("all");
+    setStrictHackathonsOnly(true);
   };
 
-  const kzCount = competitions.filter((c) => c.region === "kz").length;
-  const globalCount = competitions.filter((c) => c.region === "global").length;
+  const kzCount = dataList.filter((c) => c.region === "kz").length;
+  const globalCount = dataList.filter((c) => c.region === "global").length;
 
   return (
     <section>
-      {/* Главный переключатель регионов: Казахстан / Мировые */}
-      <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-200/80 pb-4">
-        {[
-          { id: "all", label: `Все площадки (${competitions.length})`, icon: "🔥" },
-          { id: "kz", label: `🇰🇿 Казахстанские события (${kzCount})`, icon: "🇰🇿" },
-          { id: "global", label: `🌎 Мировые платформы (${globalCount})`, icon: "🌎" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setSelectedRegion(tab.id as CompetitionRegion | "all")}
-            className={`flex items-center gap-2 rounded-2xl px-5 py-3 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-              selectedRegion === tab.id
-                ? "bg-slate-900 text-white shadow-md ring-2 ring-slate-900/20"
-                : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-2xs"
-            }`}
-          >
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Поисковая строка и расширенная сортировка */}
-      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="relative flex-1">
-          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-            🔍
+      {/* Статус-панель синхронизации */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded border border-zinc-200/80 bg-zinc-100/50 px-3.5 py-2.5 text-xs text-zinc-600 font-normal">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="flex items-center gap-1.5 text-zinc-800 font-medium">
+            <span className="h-2 w-2 rounded-full bg-zinc-500"></span>
+            <span>Синхронизация:</span>
           </span>
-          <input
-            type="text"
-            placeholder="Поиск: Kaggle, Codeforces, Devpost, Кокшетау, Астана, Алматы, LLM, Python..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-2xl border border-slate-200/90 bg-white py-3 pl-10 pr-4 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:outline-hidden focus:ring-3 focus:ring-blue-50/80 shadow-2xs transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
-            >
-              Очистить ✕
-            </button>
+          <span>
+            Казахстан: {kzCount} • Devpost: {sourceCounts.devpost || 9} • Codeforces: {sourceCounts.codeforces || 6}
+          </span>
+          {lastSyncTime && (
+            <span className="text-zinc-400">
+              ({lastSyncTime})
+            </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+        <button
+          type="button"
+          onClick={handleForceSync}
+          disabled={isSyncing}
+          className="inline-flex items-center gap-1.5 rounded border border-zinc-300 bg-white px-2.5 py-1 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 transition-colors cursor-pointer disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin text-zinc-500" : ""}`} />
+          <span>{isSyncing ? "Обновление..." : "Обновить"}</span>
+        </button>
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded border border-emerald-200 bg-emerald-50/60 px-3.5 py-2.5 text-xs text-emerald-900">
+        <div>
+          <span className="font-medium">
+            {strictHackathonsOnly ? "Строгая выдача включена." : "Показаны все типы событий."}
+          </span>{" "}
+          {strictHackathonsOnly
+            ? "Показываем только хакатоны с подтверждённым типом и дедлайном. Обучающие события, питчи и записи без срока скрыты."
+            : "Неподтверждённые сроки и условия помечены в карточках — проверяйте их на странице организатора."}
+        </div>
+        <button
+          type="button"
+          onClick={() => setStrictHackathonsOnly((value) => !value)}
+          className="shrink-0 rounded border border-emerald-300 bg-white px-2.5 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100 transition-colors cursor-pointer"
+        >
+          {strictHackathonsOnly ? "Показать все типы" : "Только хакатоны"}
+        </button>
+      </div>
+
+      {/* Вкладки регионов */}
+      <div className="mb-5 flex flex-wrap gap-1.5">
+        {[
+          { id: "all", label: `Все площадки (${dataList.length})` },
+          { id: "kz", label: `Казахстан (${kzCount})` },
+          { id: "global", label: `Мировые платформы (${globalCount})` },
+        ].map((tab) => {
+          const isActive = selectedRegion === tab.id;
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setSelectedRegion(tab.id as CompetitionRegion | "all")}
+              className={`rounded border px-3.5 py-2 text-xs font-medium transition-colors cursor-pointer ${
+                isActive
+                  ? "border-zinc-800 bg-zinc-800 text-white"
+                  : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Поиск и сортировка */}
+      <div className="mb-5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-lg">
+          <Search className="pointer-events-none absolute inset-y-0 left-3 my-auto h-3.5 w-3.5 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Поиск по названию, городу, технологиям..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded border border-zinc-200 bg-white py-1.5 pl-8 pr-3 text-xs text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-hidden"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-zinc-400 font-normal whitespace-nowrap">
             Сортировка:
-          </label>
+          </span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 text-xs font-medium text-slate-700 focus:border-blue-400 focus:outline-hidden cursor-pointer shadow-2xs"
+            className="rounded border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-700 focus:border-zinc-400 focus:outline-hidden cursor-pointer"
           >
-            <option value="deadline">⏳ Ближайший дедлайн</option>
-            <option value="prize">💰 Крупнейший призовой фонд</option>
-            <option value="barrier_asc">🟢 Порог входа: Сначала простые</option>
-            <option value="barrier_desc">🔴 Порог входа: Сначала сложные</option>
-            <option value="trust">🏆 По рейтингу организатора</option>
+            <option value="deadline">Ближайший дедлайн</option>
+            <option value="prize">Размер призового фонда</option>
+            <option value="barrier_asc">Порог входа: Сначала простые</option>
+            <option value="barrier_desc">Порог входа: Сначала сложные</option>
+            <option value="trust">Рейтинг организатора</option>
           </select>
         </div>
       </div>
 
-      {/* Блок фильтров с мягким фоном */}
-      <div className="space-y-5 rounded-2xl border border-slate-200/80 bg-white/70 backdrop-blur-xs p-5 shadow-2xs">
+      {/* Блок фильтров */}
+      <div className="space-y-4 rounded border border-zinc-200/80 bg-zinc-50/70 p-4 mb-6">
         <div>
-          <h2 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-            Категория соревнований
-          </h2>
+          <span className="block mb-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+            Категория
+          </span>
           <CategoryFilter
             selected={selectedCategory}
             onChange={setSelectedCategory}
@@ -314,9 +443,9 @@ export default function CompetitionSection() {
         </div>
 
         <div>
-          <h2 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-            Параметры, города и форматы
-          </h2>
+          <span className="block mb-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+            Параметры
+          </span>
           <CriteriaFilter
             aiOnly={aiOnly}
             withPrize={withPrize}
@@ -338,62 +467,81 @@ export default function CompetitionSection() {
         </div>
       </div>
 
-      {/* Панель результатов и переключатель Архива */}
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
-        <div className="flex items-center gap-3">
-          <p className="text-xs sm:text-sm font-medium text-slate-700">
-            Найдено соревнований:{" "}
-            <span className="font-bold text-slate-900">
-              {filteredCompetitions.length}
-            </span>{" "}
-            из {competitions.length}
-          </p>
+      {/* Результаты и архив */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-200 pb-3 mb-5">
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-zinc-500 font-normal">
+            Найдено: <span className="text-zinc-800 font-medium">{filteredCompetitions.length}</span> из {dataList.length}
+          </span>
 
           {hasActiveFilters && (
             <button
               onClick={resetFilters}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+              className="text-zinc-400 hover:text-zinc-800 underline cursor-pointer"
             >
-              Сбросить все фильтры
+              Сбросить фильтры
             </button>
           )}
         </div>
 
-        <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-xs text-zinc-500 cursor-pointer">
           <input
             type="checkbox"
             checked={showExpired}
             onChange={(e) => setShowExpired(e.target.checked)}
-            className="rounded border-slate-300 text-blue-600 focus:ring-blue-400"
+            className="rounded border-zinc-300 text-zinc-800 focus:ring-zinc-700"
           />
-          <span>Показывать архив завершенных конкурсов</span>
+          <span>Показывать завершенные</span>
         </label>
       </div>
 
       {/* Список карточек */}
-      {filteredCompetitions.length === 0 ? (
-        <div className="mt-10 rounded-2xl border border-dashed border-slate-300/80 p-12 text-center bg-white shadow-2xs">
-          <p className="text-3xl mb-3">🔍</p>
-          <h3 className="text-base font-bold text-slate-900">
-            По выбранным фильтрам ничего не найдено
-          </h3>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500">
-            Попробуйте выбрать «Все площадки» или сбросить критерии.
+      {isLoading ? (
+        <div className="rounded border border-dashed border-zinc-200 p-8 text-center bg-zinc-50">
+          <p className="text-xs text-zinc-500">Проверяем источники и условия участия…</p>
+        </div>
+      ) : filteredCompetitions.length === 0 ? (
+        <div className="rounded border border-dashed border-zinc-200 p-8 text-center bg-zinc-50">
+          <p className="text-xs text-zinc-500">
+            По выбранным фильтрам подтверждённых событий не найдено.
           </p>
           <button
             onClick={resetFilters}
-            className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="mt-2 text-xs text-zinc-700 hover:underline cursor-pointer"
           >
             Сбросить фильтры
           </button>
         </div>
       ) : (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCompetitions.map((competition) => (
-            <CompetitionCard key={competition.id} competition={competition} />
-          ))}
+        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredCompetitions.map((competition) => {
+            const isCompared = selectedForCompare.some((c) => c.id === competition.id);
+            return (
+              <CompetitionCard
+                key={competition.id}
+                competition={competition}
+                isCompared={isCompared}
+                onToggleCompare={handleToggleCompare}
+              />
+            );
+          })}
         </div>
       )}
+
+      {/* Панель и модалка сравнения */}
+      <CompareDrawer
+        selectedItems={selectedForCompare}
+        onRemove={handleRemoveFromCompare}
+        onClear={handleClearCompare}
+        onOpenModal={() => setIsCompareModalOpen(true)}
+      />
+
+      <CompareModal
+        isOpen={isCompareModalOpen}
+        onClose={() => setIsCompareModalOpen(false)}
+        items={selectedForCompare}
+        onRemove={handleRemoveFromCompare}
+      />
     </section>
   );
 }

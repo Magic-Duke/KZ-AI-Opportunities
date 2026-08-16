@@ -27,39 +27,6 @@ type CriteriaFilterProps = {
   onTrustChange: (value: CompetitionTrustRating | "all") => void;
 };
 
-type ToggleProps = {
-  label: string;
-  description: string;
-  checked: boolean;
-  icon: string;
-  onChange: (value: boolean) => void;
-};
-
-function Toggle({ label, description, checked, icon, onChange }: ToggleProps) {
-  return (
-    <label
-      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all select-none ${
-        checked
-          ? "border-blue-400 bg-blue-50/70 shadow-2xs"
-          : "border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/60"
-      }`}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400 cursor-pointer"
-      />
-      <div>
-        <span className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-900">
-          <span>{icon}</span> {label}
-        </span>
-        <span className="mt-0.5 block text-xs text-slate-500">{description}</span>
-      </div>
-    </label>
-  );
-}
-
 export default function CriteriaFilter({
   aiOnly,
   withPrize,
@@ -79,29 +46,29 @@ export default function CriteriaFilter({
   onTrustChange,
 }: CriteriaFilterProps) {
   return (
-    <div className="space-y-4">
-      {/* 1. Фильтр по городам (Астана, Алматы, Кокшетау, Другие, Онлайн) */}
-      <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-2xs">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-          🏙️ Фильтр по городам
-        </label>
-        <div className="flex flex-wrap gap-1.5">
+    <div className="space-y-3 text-xs font-normal">
+      {/* 1. Города проведения */}
+      <div>
+        <span className="block mb-1.5 text-zinc-500 font-normal">
+          Локация (РК)
+        </span>
+        <div className="flex flex-wrap gap-1">
           {[
-            { id: "all", label: "Все города" },
-            { id: "astana", label: "🇰🇿 Астана" },
-            { id: "almaty", label: "🍎 Алматы" },
-            { id: "kokshetau", label: "🌲 Кокшетау" },
-            { id: "online", label: "🌐 Онлайн (Вся РК)" },
-            { id: "other", label: "📍 Другие города" },
+            { id: "all", label: "Все" },
+            { id: "astana", label: "Астана" },
+            { id: "almaty", label: "Алматы" },
+            { id: "kokshetau", label: "Кокшетау" },
+            { id: "online", label: "Онлайн" },
+            { id: "other", label: "Другие города" },
           ].map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onCityChange(item.id as CompetitionCity | "all")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+              className={`rounded border px-2 py-0.5 text-xs transition-colors cursor-pointer ${
                 selectedCity === item.id
-                  ? "bg-slate-900 text-white shadow-2xs"
-                  : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80"
+                  ? "border-zinc-800 bg-zinc-800 text-white"
+                  : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
               }`}
             >
               {item.label}
@@ -110,19 +77,18 @@ export default function CriteriaFilter({
         </div>
       </div>
 
-      {/* 2. Формат участия (Онлайн / Офлайн / Гибрид) + Порог входа */}
+      {/* 2. Формат и Порог входа */}
       <div className="grid gap-3 sm:grid-cols-2">
-        {/* Формат */}
-        <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-2xs">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-            📍 Формат участия
-          </label>
-          <div className="flex flex-wrap gap-1.5">
+        <div>
+          <span className="block mb-1.5 text-zinc-500 font-normal">
+            Формат участия
+          </span>
+          <div className="flex flex-wrap gap-1">
             {[
               { id: "all", label: "Любой" },
-              { id: "online", label: "🌐 Только Онлайн" },
-              { id: "offline", label: "🏢 Очно (Личное присутствие)" },
-              { id: "hybrid", label: "🔄 Гибрид" },
+              { id: "online", label: "Онлайн" },
+              { id: "offline", label: "Очно" },
+              { id: "hybrid", label: "Гибрид" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -130,10 +96,10 @@ export default function CriteriaFilter({
                 onClick={() =>
                   onFormatChange(item.id as CompetitionFormat | "all")
                 }
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                className={`rounded border px-2 py-0.5 text-xs transition-colors cursor-pointer ${
                   selectedFormat === item.id
-                    ? "bg-slate-900 text-white shadow-2xs"
-                    : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80"
+                    ? "border-zinc-800 bg-zinc-800 text-white"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
                 }`}
               >
                 {item.label}
@@ -142,17 +108,16 @@ export default function CriteriaFilter({
           </div>
         </div>
 
-        {/* Порог входа */}
-        <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-2xs">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-            🪜 Порог входа в конкурс
-          </label>
-          <div className="flex flex-wrap gap-1.5">
+        <div>
+          <span className="block mb-1.5 text-zinc-500 font-normal">
+            Порог входа
+          </span>
+          <div className="flex flex-wrap gap-1">
             {[
               { id: "all", label: "Любой" },
-              { id: "easy", label: "🟢 Простая регистрация" },
-              { id: "medium", label: "🟡 Команда / MVP" },
-              { id: "hard", label: "🔴 Готовый проект / Hard" },
+              { id: "easy", label: "Легкий" },
+              { id: "medium", label: "Средний (MVP)" },
+              { id: "hard", label: "Сложный" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -160,10 +125,10 @@ export default function CriteriaFilter({
                 onClick={() =>
                   onBarrierChange(item.id as EntryBarrier | "all")
                 }
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                className={`rounded border px-2 py-0.5 text-xs transition-colors cursor-pointer ${
                   selectedBarrier === item.id
-                    ? "bg-slate-900 text-white shadow-2xs"
-                    : "bg-slate-100/90 text-slate-700 hover:bg-slate-200/80"
+                    ? "border-zinc-800 bg-zinc-800 text-white"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
                 }`}
               >
                 {item.label}
@@ -173,43 +138,51 @@ export default function CriteriaFilter({
         </div>
       </div>
 
-      {/* 3. Быстрые критерии (ИИ, Приз, Открыто) */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Toggle
-          icon="🤖"
-          label="Только ИИ и нейросети"
-          description="LLM, AI-боты, Computer Vision, ML"
-          checked={aiOnly}
-          onChange={onAiOnlyChange}
-        />
-        <Toggle
-          icon="💰"
-          label="С призовым фондом"
-          description="Денежные призы, гранты или инвестиции"
-          checked={withPrize}
-          onChange={onWithPrizeChange}
-        />
-        <Toggle
-          icon="🌍"
-          label="Открыто для всех"
-          description="Без ограничений по вузу или городу"
-          checked={openToAll}
-          onChange={onOpenToAllChange}
-        />
+      {/* 3. Чекбоксы отбора */}
+      <div className="flex flex-wrap gap-4 pt-1 border-t border-zinc-200/60">
+        <label className="flex items-center gap-1.5 cursor-pointer select-none text-zinc-700">
+          <input
+            type="checkbox"
+            checked={aiOnly}
+            onChange={(e) => onAiOnlyChange(e.target.checked)}
+            className="rounded border-zinc-300 text-zinc-700 focus:ring-zinc-700"
+          />
+          <span>ИИ и нейросети</span>
+        </label>
+
+        <label className="flex items-center gap-1.5 cursor-pointer select-none text-zinc-700">
+          <input
+            type="checkbox"
+            checked={withPrize}
+            onChange={(e) => onWithPrizeChange(e.target.checked)}
+            className="rounded border-zinc-300 text-zinc-700 focus:ring-zinc-700"
+          />
+          <span>С призовым фондом</span>
+        </label>
+
+        <label className="flex items-center gap-1.5 cursor-pointer select-none text-zinc-700">
+          <input
+            type="checkbox"
+            checked={openToAll}
+            onChange={(e) => onOpenToAllChange(e.target.checked)}
+            className="rounded border-zinc-300 text-zinc-700 focus:ring-zinc-700"
+          />
+          <span>Открыто для всех</span>
+        </label>
       </div>
 
-      {/* 4. Селекторы целевой аудитории и рейтинга */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-2xs">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-            🎯 Целевая аудитория
-          </label>
-          <div className="flex flex-wrap gap-1.5">
+      {/* 4. Аудитория и рейтинг */}
+      <div className="grid gap-3 sm:grid-cols-2 pt-1 border-t border-zinc-200/60">
+        <div>
+          <span className="block mb-1.5 text-zinc-500 font-normal">
+            Аудитория
+          </span>
+          <div className="flex flex-wrap gap-1">
             {[
-              { id: "all", label: "Любая" },
-              { id: "students", label: "🎓 Студенты вузов" },
-              { id: "school", label: "🎒 Школьники" },
-              { id: "startups", label: "🚀 Стартапы" },
+              { id: "all", label: "Все" },
+              { id: "students", label: "Студенты" },
+              { id: "school", label: "Школьники" },
+              { id: "startups", label: "Стартапы" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -217,10 +190,10 @@ export default function CriteriaFilter({
                 onClick={() =>
                   onAudienceChange(item.id as CompetitionAudience | "all")
                 }
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                className={`rounded border px-2 py-0.5 text-xs transition-colors cursor-pointer ${
                   selectedAudience === item.id
-                    ? "bg-slate-900 text-white shadow-2xs"
-                    : "bg-slate-100/90 text-slate-600 hover:bg-slate-200/80"
+                    ? "border-zinc-800 bg-zinc-800 text-white"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
                 }`}
               >
                 {item.label}
@@ -229,15 +202,15 @@ export default function CriteriaFilter({
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-2xs">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-            🛡️ Рейтинг надежности организатора
-          </label>
-          <div className="flex flex-wrap gap-1.5">
+        <div>
+          <span className="block mb-1.5 text-zinc-500 font-normal">
+            Рейтинг источника
+          </span>
+          <div className="flex flex-wrap gap-1">
             {[
-              { id: "all", label: "Любой рейтинг" },
-              { id: "high", label: "🏆 Высокий (Сертифицированный)" },
-              { id: "medium", label: "⭐ Проверенные" },
+              { id: "all", label: "Любой" },
+              { id: "high", label: "Высокий" },
+              { id: "medium", label: "Проверенные" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -245,10 +218,10 @@ export default function CriteriaFilter({
                 onClick={() =>
                   onTrustChange(item.id as CompetitionTrustRating | "all")
                 }
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                className={`rounded border px-2 py-0.5 text-xs transition-colors cursor-pointer ${
                   selectedTrust === item.id
-                    ? "bg-slate-900 text-white shadow-2xs"
-                    : "bg-slate-100/90 text-slate-600 hover:bg-slate-200/80"
+                    ? "border-zinc-800 bg-zinc-800 text-white"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
                 }`}
               >
                 {item.label}

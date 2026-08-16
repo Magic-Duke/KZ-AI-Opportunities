@@ -3,58 +3,121 @@ import TrackedSources from "@/components/TrackedSources";
 
 export default function Home() {
   return (
-    <div className="min-h-full bg-slate-50/50">
-      {/* Шапка проекта с мягким фоном и акцентом */}
-      <header className="border-b border-slate-200/80 bg-white shadow-xs">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Казахстан 🇰🇿 & Мировые платформы 🌎 • Сезон 2026–2027
-            </span>
-          </div>
+    <div className="min-h-screen bg-[#FAFAFA] text-zinc-800">
+      {/* Навигационная панель */}
+      <header className="border-b border-zinc-200/80 bg-white/90 sticky top-0 z-30">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex h-14 items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded bg-[#0f7067] text-white font-medium text-xs">
+                KZ
+              </span>
+              <span className="text-sm font-semibold tracking-tight text-zinc-900">
+                AI Opportunities
+              </span>
+              <span className="hidden sm:inline-block ml-1 rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-normal text-zinc-500">
+                2026–2027
+              </span>
+            </div>
 
-          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            KZ AI Opportunities
-          </h1>
-
-          <p className="mt-2.5 max-w-3xl text-sm sm:text-base leading-relaxed text-slate-600">
-            Единый агрегатор соревнований по искусственному интеллекту, хакатонов, олимпиад
-            и стартап-битв. Прямые ссылки на регистрацию в казахстанских вузах и технопарках
-            (Astana Hub, КУ им. Ш. Уалиханова, CPFED, РНПЦ «Дарын») и мировых платформах (Kaggle, Codeforces, Devpost, LeetCode).
-          </p>
-
-          {/* Быстрые факты / Статистика */}
-          <div className="mt-6 flex flex-wrap items-center gap-6 border-t border-slate-100 pt-4 text-xs text-slate-500">
-            <div>
-              <span className="font-bold text-slate-800">🇰🇿 + 🌎 Категории:</span> Казахстан и Мировые контесты
-            </div>
-            <div>
-              <span className="font-bold text-slate-800">🔗 Прямые ссылки:</span> На страницы условий и регистрации
-            </div>
-            <div>
-              <span className="font-bold text-slate-800">🏙️ Города РК:</span> Астана, Алматы, Кокшетау и онлайн
-            </div>
-            <div>
-              <span className="font-bold text-slate-800">🪜 Порог входа:</span> От простой регистрации до ML-стартапов
-            </div>
+            <nav className="hidden sm:flex items-center gap-4 text-xs font-normal">
+              <a
+                href="#competitions"
+                className="text-zinc-600 hover:text-zinc-900 transition-colors"
+              >
+                Соревнования
+              </a>
+              <a
+                href="#sources"
+                className="text-zinc-600 hover:text-zinc-900 transition-colors"
+              >
+                Источники
+              </a>
+              <span className="inline-flex items-center gap-1.5 rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 border border-zinc-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                <span>Live мониторинг</span>
+              </span>
+            </nav>
           </div>
         </div>
       </header>
 
-      {/* Основной контент */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      {/* Hero-секция с мягкими, приглушенными тонами и спокойным шрифтом */}
+      <section className="border-b border-[#0d3532] bg-[#103b39] py-10 sm:py-12">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="max-w-2xl">
+            <span className="inline-block rounded bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-[#0d4e48] mb-3">
+              Проверяемый реестр хакатонов и соревнований
+            </span>
+
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white leading-snug">
+              Хакатоны с подтверждёнными условиями — в Казахстане и мире
+            </h1>
+
+            <p className="mt-2.5 text-xs sm:text-sm leading-relaxed text-emerald-50/80">
+              По умолчанию показываем только хакатоны с подтверждённым типом и сроком подачи. Другие форматы доступны отдельно и не маскируются под хакатоны.
+            </p>
+
+            {/* Спокойные информационные блоки */}
+            <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4 text-xs">
+              <div className="rounded border border-white/15 bg-white/8 p-3">
+                <span className="block text-[11px] font-normal text-emerald-100/60">
+                  Охват
+                </span>
+                <span className="mt-0.5 block font-medium text-white">
+                  РК + Мир
+                </span>
+              </div>
+
+              <div className="rounded border border-white/15 bg-white/8 p-3">
+                <span className="block text-[11px] font-normal text-emerald-100/60">
+                  Призовой фонд
+                </span>
+                <span className="mt-0.5 block font-medium text-white">
+                  До $2,000,000
+                </span>
+              </div>
+
+              <div className="rounded border border-white/15 bg-white/8 p-3">
+                <span className="block text-[11px] font-normal text-emerald-100/60">
+                  Ссылки
+                </span>
+                <span className="mt-0.5 block font-medium text-white">
+                  Прямые страницы
+                </span>
+              </div>
+
+              <div className="rounded border border-white/15 bg-white/8 p-3">
+                <span className="block text-[11px] font-normal text-emerald-100/60">
+                  Инструменты
+                </span>
+                <span className="mt-0.5 block font-medium text-white">
+                  Сравнение условий
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Основной каталог */}
+      <main id="competitions" className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
         <CompetitionSection />
-        <TrackedSources />
+        <div id="sources">
+          <TrackedSources />
+        </div>
       </main>
 
-      {/* Футер */}
-      <footer className="mt-20 border-t border-slate-200 bg-white py-8 text-center text-xs text-slate-500">
-        <div className="mx-auto max-w-6xl px-4">
-          <p>© 2026 KZ AI Opportunities. Агрегатор возможностей для разработчиков Казахстана.</p>
-          <p className="mt-1 text-slate-400">
-            Источники: Astana Hub, Kaggle, Codeforces, Devpost, РНПЦ «Дарын», CPFED, КУ им. Ш. Уалиханова, LeetCode, AtCoder, КБТУ, SDU, МУИТ.
-          </p>
+      {/* Приглушенный футер */}
+      <footer className="border-t border-[#0d3532] bg-[#103b39] py-8 text-xs text-emerald-50/70 mt-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p>© 2026 KZ AI Opportunities. Каталог соревнований для разработчиков.</p>
+          <a
+            href="#competitions"
+            className="text-emerald-100 hover:text-white transition-colors"
+          >
+            Наверх ↑
+          </a>
         </div>
       </footer>
     </div>

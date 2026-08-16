@@ -20,6 +20,13 @@ export type CompetitionTrustRating =
   | "medium"  // Проверенный
   | "new";    // Новый
 
+/** How confidently the event itself was classified, independently of its organizer. */
+export type CompetitionQualityStatus =
+  | "verified-hackathon"
+  | "verified-other-competition"
+  | "needs-review"
+  | "rejected";
+
 export type CompetitionCity =
   | "astana"
   | "almaty"
@@ -43,7 +50,8 @@ export type Competition = {
   description: string;
   category: CompetitionCategory;
   region: CompetitionRegion;
-  deadline: string; // Формат YYYY-MM-DD
+  /** Confirmed registration deadline. Never guessed when the source omits it. */
+  deadline?: string; // Формат YYYY-MM-DD
   location: string;
   city: CompetitionCity;
   format: CompetitionFormat;
@@ -60,6 +68,16 @@ export type Competition = {
   trustNotes?: string;
   openToAll: boolean;
   tags?: string[];
+  /** Флаг получения данных в реальном времени через API */
+  isLive?: boolean;
+  /** Текстовая плашка источника (например '⚡ Live Devpost', '⚡ Live Codeforces', '🇰🇿 Astana Hub') */
+  sourceBadge?: string;
+  /** Формат команды (например '1–4 человека', 'Только индивидуально', 'Команда до 5 чел.') */
+  teamRequirement?: string;
+  /** Conservative result of the event-quality classifier. */
+  qualityStatus?: CompetitionQualityStatus;
+  /** Human-readable reasons used to classify the event. */
+  qualityReasons?: string[];
 };
 
 export const regionLabels: Record<CompetitionRegion | "all", string> = {

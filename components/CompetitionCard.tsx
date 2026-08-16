@@ -1,19 +1,21 @@
 import type { Competition } from "@/types/competition";
 import {
-  audienceLabels,
   categoryLabels,
   trustRatingLabels,
   formatLabels,
   entryBarrierLabels,
 } from "@/types/competition";
 import { trackedSources } from "@/data/sources";
+import { ArrowUpRight, Check, Scale } from "lucide-react";
 
 type CompetitionCardProps = {
   competition: Competition;
+  isCompared?: boolean;
+  onToggleCompare?: (competition: Competition) => void;
 };
 
-// Функция для форматирования даты на русском
-function formatDateRu(dateString: string) {
+function formatDateRu(dateString?: string) {
+  if (!dateString) return "Не подтверждён";
   const date = new Date(dateString);
   return date.toLocaleDateString("ru-RU", {
     day: "numeric",
@@ -22,191 +24,173 @@ function formatDateRu(dateString: string) {
   });
 }
 
-// Расчет оставшихся дней и статуса дедлайна с мягкими цветами
-function getDeadlineInfo(deadlineStr: string) {
+function getDaysRemaining(deadlineStr?: string) {
+  if (!deadlineStr) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const deadline = new Date(deadlineStr);
   deadline.setHours(23, 59, 59, 999);
 
-  const diffTime = deadline.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays < 0) {
-    return {
-      status: "expired",
-      label: "Завершено",
-      badgeClass: "bg-slate-100 text-slate-500 border-slate-200",
-    };
-  }
-  if (diffDays === 0) {
-    return {
-      status: "urgent",
-      label: "🔥 Сегодня последний день!",
-      badgeClass: "bg-rose-50 text-rose-700 border-rose-200 font-semibold animate-pulse",
-    };
-  }
-  if (diffDays === 1) {
-    return {
-      status: "urgent",
-      label: "🔥 Остался 1 день!",
-      badgeClass: "bg-rose-50 text-rose-700 border-rose-200 font-medium",
-    };
-  }
-  if (diffDays <= 7) {
-    return {
-      status: "urgent",
-      label: `🔥 Осталось ${diffDays} дн.`,
-      badgeClass: "bg-amber-50 text-amber-800 border-amber-200 font-medium",
-    };
-  }
-  if (diffDays <= 30) {
-    return {
-      status: "active",
-      label: `⏳ Осталось ${diffDays} дн.`,
-      badgeClass: "bg-sky-50 text-sky-700 border-sky-200",
-    };
-  }
-  return {
-    status: "open",
-    label: "🟢 Регистрация открыта",
-    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  };
+  return Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export default function CompetitionCard({ competition }: CompetitionCardProps) {
+export default function CompetitionCard({
+  competition,
+  isCompared = false,
+  onToggleCompare,
+}: CompetitionCardProps) {
   const source = trackedSources.find((item) => item.id === competition.sourceId);
-  const deadlineInfo = getDeadlineInfo(competition.deadline);
-  const trustInfo = trustRatingLabels[competition.trustRating];
-  const barrierInfo = entryBarrierLabels[competition.entryBarrier];
+  const daysLeft = getDaysRemaining(competition.deadline);
+  const barrier = entryBarrierLabels[competition.entryBarrier];
+  const trust = trustRatingLabels[competition.trustRating];
+  const qualityLabel =
+    competition.qualityStatus === "verified-hackathon"
+      ? "Подтверждённый хакатон"
+      : competition.qualityStatus === "verified-other-competition"
+        ? "Проверенное соревнование"
+        : "Требует проверки";
 
   return (
-    <article className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)]">
+    <article
+      className={`flex flex-col justify-between rounded border bg-white p-4 text-xs transition-colors ${
+        isCompared
+          ? "border-zinc-800 ring-1 ring-zinc-800"
+          : "border-zinc-200/90 hover:border-zinc-300"
+      }`}
+    >
       <div>
-        {/* Верхняя строка: Индикатор дедлайна + Рейтинг надежности */}
-        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <span
-            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${deadlineInfo.badgeClass}`}
-          >
-            {deadlineInfo.label}
-          </span>
-
-          <span
-            title={trustInfo.description}
-            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${trustInfo.color}`}
-          >
-            {trustInfo.badge}
-          </span>
-        </div>
-
-        {/* Теги категорий, формата и порога входа */}
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 border border-slate-200/60">
-            {categoryLabels[competition.category]}
-          </span>
-
-          {/* Формат участия */}
-          <span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 border border-blue-100">
-            {formatLabels[competition.format]}
-          </span>
-
-          {/* Порог входа */}
-          <span
-            title={barrierInfo.description}
-            className={`rounded-lg px-2 py-1 text-xs font-medium border ${barrierInfo.color}`}
-          >
-            {barrierInfo.badge}
-          </span>
-
-          {competition.isAI && (
-            <span className="rounded-lg bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 border border-purple-100">
-              🤖 ИИ
+        {/* Верхняя строка: Метки и переключатель сравнения */}
+        <div className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-zinc-100">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-700">
+              {categoryLabels[competition.category]}
             </span>
-          )}
 
-          {competition.audience === "school" && (
-            <span className="rounded-lg bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 border border-sky-100">
-              🎒 Школьники
-            </span>
-          )}
+            {competition.isLive && (
+              <span className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 border border-zinc-200/60">
+                Live
+              </span>
+            )}
 
-          {competition.audience === "students" && (
-            <span className="rounded-lg bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 border border-indigo-100">
-              🎓 Студенты
+            {competition.isAI && (
+              <span className="rounded bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-700">
+                AI
+              </span>
+            )}
+            <span className={`rounded px-2 py-0.5 text-[11px] font-medium border ${
+              competition.qualityStatus === "verified-hackathon"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-amber-200 bg-amber-50 text-amber-800"
+            }`}>
+              {qualityLabel}
             </span>
-          )}
+          </div>
 
-          {competition.audience === "startups" && (
-            <span className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 border border-amber-100">
-              🚀 Стартапы
-            </span>
+          {onToggleCompare && (
+            <button
+              type="button"
+              onClick={() => onToggleCompare(competition)}
+              className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-normal transition-colors cursor-pointer ${
+                isCompared
+                  ? "border-zinc-800 bg-zinc-800 text-white"
+                  : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
+              }`}
+            >
+              {isCompared ? (
+                <>
+                  <Check className="h-3 w-3" />
+                  <span>Выбрано</span>
+                </>
+              ) : (
+                <>
+                  <Scale className="h-3 w-3" />
+                  <span>Сравнить</span>
+                </>
+              )}
+            </button>
           )}
         </div>
 
-        {/* Заголовок карточки */}
-        <h2 className="mb-2 text-lg font-bold leading-snug text-slate-900 group-hover:text-blue-600 transition-colors">
+        {/* Заголовок */}
+        <h2 className="text-sm font-semibold leading-snug text-zinc-900">
           {competition.title}
         </h2>
 
         {/* Описание */}
-        <p className="mb-4 text-xs sm:text-sm leading-relaxed text-slate-600 line-clamp-3">
+        <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 line-clamp-2">
           {competition.description}
         </p>
 
         {/* Призовой фонд */}
         {competition.hasPrize && competition.prizeAmount && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-50/70 border border-amber-200/60 px-3 py-2 text-amber-900">
-            <span className="text-sm">💰</span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-700">
-              Приз:
-            </span>
-            <span className="text-xs sm:text-sm font-bold text-amber-900">
-              {competition.prizeAmount}
-            </span>
+          <div className="mt-3 rounded bg-zinc-50 border border-zinc-200/80 px-2.5 py-1.5 text-xs">
+            <span className="text-zinc-500 mr-1.5 font-normal">Фонд:</span>
+            <span className="font-medium text-zinc-900">{competition.prizeAmount}</span>
           </div>
         )}
 
-        {/* Детали соревнований */}
-        <dl className="mb-4 space-y-1.5 text-xs text-slate-600">
-          <div className="flex items-center justify-between border-t border-slate-100 pt-2">
-            <dt className="text-slate-400">📅 Окончание приема:</dt>
-            <dd className="font-semibold text-slate-800">
+        {/* Список параметров */}
+        <dl className="mt-3 space-y-1.5 text-xs border-t border-zinc-100 pt-2.5 text-zinc-600">
+          <div className="flex justify-between">
+            <dt className="text-zinc-400 font-normal">Дедлайн:</dt>
+            <dd className="font-medium text-zinc-800">
               {formatDateRu(competition.deadline)}
+              {daysLeft !== null && daysLeft >= 0 && (
+                <span className="ml-1 text-zinc-400 font-normal">
+                  ({daysLeft === 0 ? "сегодня" : `${daysLeft} дн.`})
+                </span>
+              )}
             </dd>
           </div>
 
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-400">📍 Локация:</dt>
-            <dd className="font-medium text-slate-700">{competition.location}</dd>
+          <div className="flex justify-between">
+            <dt className="text-zinc-400 font-normal">Формат / Город:</dt>
+            <dd className="text-zinc-700 text-right truncate max-w-[170px]">
+              {formatLabels[competition.format]} • {competition.location}
+            </dd>
           </div>
 
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-400">🎯 Аудитория:</dt>
-            <dd className="font-medium text-slate-700">
-              {audienceLabels[competition.audience]}
-            </dd>
+          <div className="flex justify-between">
+            <dt className="text-zinc-400 font-normal">Порог входа:</dt>
+            <dd className="text-zinc-700">{barrier.label}</dd>
+          </div>
+
+          {competition.teamRequirement && (
+            <div className="flex justify-between">
+              <dt className="text-zinc-400 font-normal">Команда:</dt>
+              <dd className="text-zinc-700 truncate max-w-[170px] text-right">
+                {competition.teamRequirement}
+              </dd>
+            </div>
+          )}
+
+          <div className="flex justify-between">
+            <dt className="text-zinc-400 font-normal">Надежность:</dt>
+            <dd className="text-zinc-700">{trust.label}</dd>
           </div>
 
           {source && (
-            <div className="flex items-center justify-between">
-              <dt className="text-slate-400">🏢 Организатор / Вуз:</dt>
-              <dd className="font-medium text-slate-700">{source.name}</dd>
+            <div className="flex justify-between">
+              <dt className="text-zinc-400 font-normal">Организатор:</dt>
+              <dd className="text-zinc-700 text-right truncate max-w-[160px]">
+                {source.name}
+              </dd>
             </div>
           )}
         </dl>
       </div>
 
-      {/* Кнопка перехода к регистрации */}
-      <div className="mt-2 pt-3 border-t border-slate-100">
+      {/* Кнопка регистрации */}
+      <div className="mt-3.5 pt-2.5 border-t border-zinc-100">
         <a
           href={competition.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs sm:text-sm font-medium text-white transition-all hover:bg-slate-800 hover:shadow-xs active:scale-[0.99]"
+          className="flex w-full items-center justify-center gap-1.5 rounded bg-zinc-800 hover:bg-zinc-700 py-2 text-xs font-normal text-white transition-colors"
         >
-          <span>Официальная регистрация</span>
-          <span className="text-slate-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
+          <span>Страница события</span>
+          <ArrowUpRight className="h-3.5 w-3.5 text-zinc-400" />
         </a>
       </div>
     </article>
